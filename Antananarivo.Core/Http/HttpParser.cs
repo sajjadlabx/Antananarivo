@@ -4,6 +4,11 @@ public sealed class HttpParser
 {
     public HttpRequest Parse(string rawRequest)
     {
+        if (string.IsNullOrEmpty(rawRequest))
+        {
+            throw new FormatException("Invalid HTTP request.");
+        }
+
         var lines = rawRequest.Split(
             "\r\n",
             StringSplitOptions.None);
@@ -13,14 +18,17 @@ public sealed class HttpParser
             throw new FormatException("Invalid HTTP request.");
         }
 
-        var requestLine = lines[0].Split(' ');
+        var requestLineParts = lines[0].Split(' ');
 
-        if (requestLine.Length != 3)
+        if (requestLineParts.Length != 3)
         {
             throw new FormatException("Invalid HTTP request line.");
         }
 
-        var rawTarget = requestLine[1];
+        var method = requestLineParts[0];
+        var rawTarget = requestLineParts[1];
+        var version = requestLineParts[2];
+
         string path;
         string queryString = string.Empty;
 
@@ -38,35 +46,38 @@ public sealed class HttpParser
         var headerEndIndex = -1;
         for (int i = 1; i < lines.Length; i++)
         {
-            if (string.IsNullOrWhiteSpace(lines[i]))
+            if (lines[i].Length == 0)
             {
                 headerEndIndex = i;
                 break;
             }
         }
 
+        int headerLimit = headerEndIndex >= 0 ? headerEndIndex : lines.Length;
+
         string body = string.Empty;
         if (headerEndIndex >= 0 && headerEndIndex + 1 < lines.Length)
         {
-            body = string.Join("\r\n", lines[(headerEndIndex + 1)..]);
+            var bodyLines = lines[(headerEndIndex + 1)..];
+            int end = bodyLines.Length;
+            while (end > 0 && bodyLines[end - 1].Length == 0)
+            {
+                end--;
+            }
+            body = string.Join("\r\n", bodyLines[..end]);
         }
 
         var request = new HttpRequest
         {
-            Method = requestLine[0],
+            Method = method,
             Path = path,
             QueryString = queryString,
-            Version = requestLine[2],
+            Version = version,
             Body = body
         };
 
-        for (int i = 1; i < lines.Length; i++)
+        for (int i = 1; i < headerLimit; i++)
         {
-            if (string.IsNullOrWhiteSpace(lines[i]))
-            {
-                break;
-            }
-
             var separatorIndex = lines[i].IndexOf(':');
 
             if (separatorIndex <= 0)
@@ -77,7 +88,10 @@ public sealed class HttpParser
             var name = lines[i][..separatorIndex].Trim();
             var value = lines[i][(separatorIndex + 1)..].Trim();
 
-            request.Headers[name] = value;
+            if (name.Length > 0)
+            {
+                request.Headers[name] = value;
+            }
         }
 
         return request;
