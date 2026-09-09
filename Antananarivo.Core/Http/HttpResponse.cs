@@ -1,0 +1,12 @@
+﻿namespace Antananarivo.Core.Http;
+
+public sealed class HttpResponse
+{
+    public int StatusCode { get; init; }
+
+    public string ReasonPhrase { get; init; } = string.Empty;
+
+    public Dictionary<string, string> Headers { get; } = new();
+
+    public string Body { get; init; } = string.Empty;
+}

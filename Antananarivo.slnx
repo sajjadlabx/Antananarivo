@@ -1,3 +1,5 @@
 <Solution>
   <Project Path="Antananarivo.Core/Antananarivo.Core.csproj" />
+  <Project Path="Antananarivo.Server/Antananarivo.Server.csproj" />
+  <Project Path="Antananarivo.Tests/Antananarivo.Tests.csproj" />
 </Solution>
