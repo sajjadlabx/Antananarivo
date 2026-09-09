@@ -2,7 +2,7 @@
 
 public sealed class HttpRequest
 {
-    public string Method { get; init; } = string.Empty;
+    public HttpMethod Method { get; init; } = HttpMethod.Get;
 
     public string Path { get; init; } = string.Empty;
 

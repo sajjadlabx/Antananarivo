@@ -25,9 +25,12 @@ public sealed class HttpParser
             throw new FormatException("Invalid HTTP request line.");
         }
 
-        var method = requestLineParts[0];
+        var rawMethod = requestLineParts[0];
         var rawTarget = requestLineParts[1];
         var version = requestLineParts[2];
+
+        // Parse method using implicit conversion - throws FormatException for unsupported methods
+        var method = (HttpMethod)rawMethod;
 
         string path;
         string queryString = string.Empty;

@@ -1,5 +1,7 @@
 ﻿using Antananarivo.Core.Http;
 
+using HttpMethod = Antananarivo.Core.Http.HttpMethod;
+
 namespace Antananarivo.Tests.Http;
 
 public class HttpParserTests
@@ -16,7 +18,7 @@ public class HttpParserTests
         var parser = new HttpParser();
         var request = parser.Parse(rawRequest);
 
-        Assert.Equal("GET", request.Method);
+        Assert.Equal("GET", request.Method.ToString());
         Assert.Equal("/", request.Path);
         Assert.Equal("HTTP/1.1", request.Version);
     }
@@ -94,7 +96,7 @@ public class HttpParserTests
         var parser = new HttpParser();
         var request = parser.Parse(rawRequest);
 
-        Assert.Equal("POST", request.Method);
+        Assert.Equal("POST", request.Method.ToString());
         Assert.Equal("{\"key\":\"val\"}", request.Body);
     }
 
@@ -230,7 +232,7 @@ public class HttpParserTests
         var parser = new HttpParser();
         var request = parser.Parse(rawRequest);
 
-        Assert.Equal("POST", request.Method);
+        Assert.Equal("POST", request.Method.ToString());
     }
 
     [Fact]
@@ -263,5 +265,124 @@ public class HttpParserTests
 
         Assert.Equal("/search", request.Path);
         Assert.Equal("?q=test&page=1&limit=10", request.QueryString);
+    }
+
+    // === New HTTP method tests ===
+
+    [Fact]
+    public void Parse_GetRequest_ReturnsGetMethod()
+    {
+        var rawRequest = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
+
+        var parser = new HttpParser();
+        var request = parser.Parse(rawRequest);
+
+        Assert.Equal(HttpMethod.Get, request.Method);
+    }
+
+    [Fact]
+    public void Parse_PostRequest_ReturnsPostMethod()
+    {
+        var rawRequest = "POST /users HTTP/1.1\r\nHost: localhost\r\n\r\n";
+
+        var parser = new HttpParser();
+        var request = parser.Parse(rawRequest);
+
+        Assert.Equal(HttpMethod.Post, request.Method);
+    }
+
+    [Fact]
+    public void Parse_PutRequest_ReturnsPutMethod()
+    {
+        var rawRequest = "PUT /users/1 HTTP/1.1\r\nHost: localhost\r\n\r\n";
+
+        var parser = new HttpParser();
+        var request = parser.Parse(rawRequest);
+
+        Assert.Equal(HttpMethod.Put, request.Method);
+    }
+
+    [Fact]
+    public void Parse_DeleteRequest_ReturnsDeleteMethod()
+    {
+        var rawRequest = "DELETE /users/1 HTTP/1.1\r\nHost: localhost\r\n\r\n";
+
+        var parser = new HttpParser();
+        var request = parser.Parse(rawRequest);
+
+        Assert.Equal(HttpMethod.Delete, request.Method);
+    }
+
+    [Fact]
+    public void Parse_HeadRequest_ReturnsHeadMethod()
+    {
+        var rawRequest = "HEAD / HTTP/1.1\r\nHost: localhost\r\n\r\n";
+
+        var parser = new HttpParser();
+        var request = parser.Parse(rawRequest);
+
+        Assert.Equal(HttpMethod.Head, request.Method);
+    }
+
+    [Fact]
+    public void Parse_OptionsRequest_ReturnsOptionsMethod()
+    {
+        var rawRequest = "OPTIONS / HTTP/1.1\r\nHost: localhost\r\n\r\n";
+
+        var parser = new HttpParser();
+        var request = parser.Parse(rawRequest);
+
+        Assert.Equal(HttpMethod.Options, request.Method);
+    }
+
+    [Fact]
+    public void Parse_PatchRequest_ReturnsPatchMethod()
+    {
+        var rawRequest = "PATCH /users/1 HTTP/1.1\r\nHost: localhost\r\n\r\n";
+
+        var parser = new HttpParser();
+        var request = parser.Parse(rawRequest);
+
+        Assert.Equal(HttpMethod.Patch, request.Method);
+    }
+
+    [Fact]
+    public void Parse_UnsupportedMethod_ThrowsFormatException()
+    {
+        var rawRequest = "TRACE / HTTP/1.1\r\nHost: localhost\r\n\r\n";
+
+        var parser = new HttpParser();
+
+        Assert.Throws<FormatException>(() => parser.Parse(rawRequest));
+    }
+
+    [Fact]
+    public void Parse_GetRequestWithQueryString_ParsesMethodAndQuery()
+    {
+        var rawRequest = "GET /products?page=2 HTTP/1.1\r\nHost: localhost\r\n\r\n";
+
+        var parser = new HttpParser();
+        var request = parser.Parse(rawRequest);
+
+        Assert.Equal(HttpMethod.Get, request.Method);
+        Assert.Equal("/products", request.Path);
+        Assert.Equal("?page=2", request.QueryString);
+    }
+
+    [Fact]
+    public void Parse_PostRequestWithBody_ParsesMethodAndBody()
+    {
+        var rawRequest =
+            "POST /users HTTP/1.1\r\n" +
+            "Host: localhost\r\n" +
+            "Content-Length: 13\r\n" +
+            "\r\n" +
+            "{\"key\":\"val\"}";
+
+        var parser = new HttpParser();
+        var request = parser.Parse(rawRequest);
+
+        Assert.Equal(HttpMethod.Post, request.Method);
+        Assert.Equal("{\"key\":\"val\"}", request.Body);
     }
 }
