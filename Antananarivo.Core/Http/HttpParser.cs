@@ -20,11 +20,44 @@ public sealed class HttpParser
             throw new FormatException("Invalid HTTP request line.");
         }
 
+        var rawTarget = requestLine[1];
+        string path;
+        string queryString = string.Empty;
+
+        var queryIndex = rawTarget.IndexOf('?');
+        if (queryIndex >= 0)
+        {
+            path = rawTarget[..queryIndex];
+            queryString = rawTarget[queryIndex..];
+        }
+        else
+        {
+            path = rawTarget;
+        }
+
+        var headerEndIndex = -1;
+        for (int i = 1; i < lines.Length; i++)
+        {
+            if (string.IsNullOrWhiteSpace(lines[i]))
+            {
+                headerEndIndex = i;
+                break;
+            }
+        }
+
+        string body = string.Empty;
+        if (headerEndIndex >= 0 && headerEndIndex + 1 < lines.Length)
+        {
+            body = string.Join("\r\n", lines[(headerEndIndex + 1)..]);
+        }
+
         var request = new HttpRequest
         {
             Method = requestLine[0],
-            Path = requestLine[1],
-            Version = requestLine[2]
+            Path = path,
+            QueryString = queryString,
+            Version = requestLine[2],
+            Body = body
         };
 
         for (int i = 1; i < lines.Length; i++)
