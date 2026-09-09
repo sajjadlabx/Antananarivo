@@ -54,7 +54,6 @@ public sealed class TcpConnection
         var response = new HttpResponse
         {
             StatusCode = 200,
-            ReasonPhrase = "OK",
             Body = """
                    <!DOCTYPE html>
                    <html>
@@ -72,9 +71,6 @@ public sealed class TcpConnection
 
         response.Headers["Content-Type"] =
             "text/html; charset=utf-8";
-
-        response.Headers["Content-Length"] =
-            Encoding.UTF8.GetByteCount(response.Body).ToString();
 
         var writer = new HttpResponseWriter();
 
