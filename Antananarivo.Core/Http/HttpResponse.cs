@@ -2,7 +2,7 @@
 
 public sealed class HttpResponse
 {
-    public int StatusCode { get; init; }
+    public HttpStatusCode StatusCode { get; init; }
 
     public string ReasonPhrase { get; init; } = string.Empty;
 

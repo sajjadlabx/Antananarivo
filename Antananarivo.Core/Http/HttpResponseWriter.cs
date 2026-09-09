@@ -12,7 +12,7 @@ public sealed class HttpResponseWriter
         var responseBuilder = new StringBuilder();
 
         responseBuilder.Append(
-            $"HTTP/1.1 {response.StatusCode} {response.ReasonPhrase}\r\n");
+            $"HTTP/1.1 {response.StatusCode.Code} {response.StatusCode.ReasonPhrase}\r\n");
 
         foreach (var header in response.Headers)
         {
