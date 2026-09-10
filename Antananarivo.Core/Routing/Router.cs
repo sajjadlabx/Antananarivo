@@ -28,13 +28,15 @@ public sealed class Router
             throw new ArgumentNullException(nameof(handler));
         }
 
-        if (_routes.Any(route => route.Method == method && route.Path == path))
+        var newRoute = new Route(method, path, handler);
+
+        if (_routes.Any(route => route.Method == method && route.Structure == newRoute.Structure))
         {
             throw new ArgumentException(
-                $"A route for {method} {path} is already registered.");
+                $"A conflicting route for {method} {newRoute.Structure} is already registered.");
         }
 
-        _routes.Add(new Route(method, path, handler));
+        _routes.Add(newRoute);
 
         return this;
     }
@@ -67,10 +69,18 @@ public sealed class Router
             throw new ArgumentNullException(nameof(request));
         }
 
+        var parameters = new Dictionary<string, string>();
+
         var pathExists = false;
 
+        // First pass: static routes (deterministic, no parameter extraction).
         foreach (var route in _routes)
         {
+            if (route.HasParameters)
+            {
+                continue;
+            }
+
             if (!string.Equals(route.Path, request.Path, StringComparison.Ordinal))
             {
                 continue;
@@ -78,6 +88,29 @@ public sealed class Router
 
             if (route.Method == request.Method)
             {
+                request.RouteParameters.Clear();
+                return RouteMatchResult.Matched(route);
+            }
+
+            pathExists = true;
+        }
+
+        // Second pass: parameterized routes.
+        foreach (var route in _routes)
+        {
+            if (!route.HasParameters)
+            {
+                continue;
+            }
+
+            if (!route.TryMatchPath(request.Path, parameters))
+            {
+                continue;
+            }
+
+            if (route.Method == request.Method)
+            {
+                ReplaceRouteParameters(request, parameters);
                 return RouteMatchResult.Matched(route);
             }
 
@@ -87,5 +120,17 @@ public sealed class Router
         return pathExists
             ? RouteMatchResult.MethodMismatch()
             : RouteMatchResult.NotFound();
+    }
+
+    private static void ReplaceRouteParameters(
+        HttpRequest request,
+        Dictionary<string, string> parameters)
+    {
+        request.RouteParameters.Clear();
+
+        foreach (var pair in parameters)
+        {
+            request.RouteParameters[pair.Key] = pair.Value;
+        }
     }
 }

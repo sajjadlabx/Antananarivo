@@ -12,5 +12,7 @@ public sealed class HttpRequest
 
     public Dictionary<string, string> Headers { get; } = new();
 
+    public Dictionary<string, string> RouteParameters { get; } = new();
+
     public string Body { get; init; } = string.Empty;
 }
