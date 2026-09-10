@@ -1,20 +1,26 @@
 ﻿using Antananarivo.Core.Http;
+using Antananarivo.Core.Routing;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using HttpStatusCode = Antananarivo.Core.Http.HttpStatusCode;
 
 namespace Antananarivo.Core.Networking;
 
 public sealed class TcpConnection
 {
-    public EndPoint? RemoteEndPoint =>
-    _client.Client.RemoteEndPoint;
-
     private readonly TcpClient _client;
+    private readonly Router _router;
+    private readonly HttpParser _parser = new();
+    private readonly HttpResponseWriter _writer = new();
 
-    public TcpConnection(TcpClient client)
+    public EndPoint? RemoteEndPoint =>
+        _client.Client.RemoteEndPoint;
+
+    public TcpConnection(TcpClient client, Router router)
     {
         _client = client;
+        _router = router ?? throw new ArgumentNullException(nameof(router));
     }
 
     public async Task ReceiveAsync(
@@ -42,44 +48,78 @@ public sealed class TcpConnection
         Console.WriteLine("Raw HTTP Request:");
         Console.WriteLine(rawRequest);
 
-        var parser = new HttpParser();
+        HttpRequest request;
 
-        HttpRequest request = parser.Parse(rawRequest);
+        try
+        {
+            request = _parser.Parse(rawRequest);
+        }
+        catch (FormatException)
+        {
+            Console.WriteLine("Malformed HTTP request.");
+
+            await WriteResponseAsync(
+                stream,
+                CreateErrorResponse(400),
+                cancellationToken);
+
+            return;
+        }
 
         Console.WriteLine("Parsed HTTP Request:");
         Console.WriteLine($"Method: {request.Method}");
         Console.WriteLine($"Path: {request.Path}");
         Console.WriteLine($"Version: {request.Version}");
 
-        var response = new HttpResponse
-        {
-            StatusCode = 200,
-            Body = """
-                   <!DOCTYPE html>
-                   <html>
-                   <head>
-                       <meta charset="utf-8">
-                       <title>Antananarivo</title>
-                   </head>
-                   <body>
-                       <h1>Hello from Antananarivo!</h1>
-                       <p>My web server is working.</p>
-                   </body>
-                   </html>
-                   """
-        };
+        var response = ResolveResponse(request);
 
-        response.Headers["Content-Type"] =
-            "text/html; charset=utf-8";
-
-        var writer = new HttpResponseWriter();
-
-        await writer.WriteAsync(
+        await WriteResponseAsync(
             stream,
             response,
             cancellationToken);
 
         Console.WriteLine("Response sent.");
+    }
+
+    private HttpResponse ResolveResponse(HttpRequest request)
+    {
+        var match = _router.Match(request);
+
+        if (match.IsMatch)
+        {
+            return match.Route!.Handler(request);
+        }
+
+        return match.Status == RouteMatchStatus.MethodMismatch
+            ? CreateErrorResponse(405)
+            : CreateErrorResponse(404);
+    }
+
+    private static HttpResponse CreateErrorResponse(int statusCode)
+    {
+        var code = (HttpStatusCode)statusCode;
+
+        var response = new HttpResponse
+        {
+            StatusCode = code,
+            Body = $"{code.Code} {code.ReasonPhrase}"
+        };
+
+        response.Headers["Content-Type"] =
+            "text/plain; charset=utf-8";
+
+        return response;
+    }
+
+    private async Task WriteResponseAsync(
+        NetworkStream stream,
+        HttpResponse response,
+        CancellationToken cancellationToken)
+    {
+        await _writer.WriteAsync(
+            stream,
+            response,
+            cancellationToken);
     }
 
     public void Close()

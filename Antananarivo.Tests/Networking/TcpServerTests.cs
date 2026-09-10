@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using Antananarivo.Core.Http;
 using Antananarivo.Core.Networking;
+using Antananarivo.Core.Routing;
 
 namespace Antananarivo.Tests.Networking;
 
@@ -16,12 +18,19 @@ public class TcpServerTests
         return port;
     }
 
+    private static Router CreateDefaultRouter() =>
+        new Router().MapGet("/", _ => new HttpResponse
+        {
+            StatusCode = 200,
+            Body = "Hello from Antananarivo!"
+        });
+
     [Fact]
     public async Task Server_AcceptsConnection_SendsValidHttpResponse()
     {
         int port = GetAvailablePort();
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        var server = new TcpServer(IPAddress.Loopback, port);
+        var server = new TcpServer(IPAddress.Loopback, port, CreateDefaultRouter());
 
         var serverTask = server.StartAsync(cts.Token);
 
@@ -57,7 +66,7 @@ public class TcpServerTests
     {
         int port = GetAvailablePort();
         using var cts = new CancellationTokenSource();
-        var server = new TcpServer(IPAddress.Loopback, port);
+        var server = new TcpServer(IPAddress.Loopback, port, CreateDefaultRouter());
 
         var serverTask = server.StartAsync(cts.Token);
 
@@ -75,7 +84,7 @@ public class TcpServerTests
     {
         int port = GetAvailablePort();
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-        var server = new TcpServer(IPAddress.Loopback, port);
+        var server = new TcpServer(IPAddress.Loopback, port, CreateDefaultRouter());
 
         var serverTask = server.StartAsync(cts.Token);
 

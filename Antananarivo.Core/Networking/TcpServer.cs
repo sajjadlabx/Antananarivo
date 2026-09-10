@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using Antananarivo.Core.Routing;
+using System.Net;
 using System.Net.Sockets;
 
 namespace Antananarivo.Core.Networking;
@@ -6,10 +7,12 @@ namespace Antananarivo.Core.Networking;
 public sealed class TcpServer
 {
     private readonly TcpListener _listener;
+    private readonly Router _router;
 
-    public TcpServer(IPAddress address, int port)
+    public TcpServer(IPAddress address, int port, Router router)
     {
         _listener = new TcpListener(address, port);
+        _router = router ?? throw new ArgumentNullException(nameof(router));
     }
 
     public async Task StartAsync(
@@ -56,7 +59,7 @@ public sealed class TcpServer
     {
         using (client)
         {
-            var connection = new TcpConnection(client);
+            var connection = new TcpConnection(client, _router);
 
             try
             {
